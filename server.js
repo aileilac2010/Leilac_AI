@@ -25,9 +25,31 @@ const ai = new GoogleGenAI({
   apiKey: GEMINI_API_KEY
 });
 
-// Página inicial
+// Página principal
 app.get("/", (req, res) => {
   res.send("Leilac AI WhatsApp está funcionando!");
+});
+
+// Página para a Meta verificar como site comercial
+app.get("/business", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Leilac AI</title>
+    </head>
+    <body>
+      <h1>Leilac AI</h1>
+      <p>Assistente de inteligência artificial para WhatsApp.</p>
+      <p>
+        A Leilac AI utiliza inteligência artificial para
+        responder mensagens e ajudar os utilizadores.
+      </p>
+    </body>
+    </html>
+  `);
 });
 
 // Verificação do Webhook pela Meta
@@ -47,7 +69,7 @@ app.get("/webhook", (req, res) => {
 
 // Receber mensagens do WhatsApp
 app.post("/webhook", async (req, res) => {
-  // Responde rapidamente à Meta
+  // Responde imediatamente à Meta
   res.sendStatus(200);
 
   try {
@@ -70,7 +92,7 @@ app.post("/webhook", async (req, res) => {
         }
 
         for (const message of value.messages) {
-          // Por enquanto, só processamos texto
+          // Por enquanto, só processamos mensagens de texto
           if (message.type !== "text") {
             continue;
           }
@@ -108,13 +130,12 @@ app.post("/webhook", async (req, res) => {
         }
       }
     }
-
   } catch (error) {
     console.error("Erro no webhook:", error);
   }
 });
 
-// Enviar mensagem pela API do WhatsApp
+// Enviar mensagem pelo WhatsApp Cloud API
 async function sendWhatsAppMessage(to, text) {
   const url =
     `https://graph.facebook.com/${GRAPH_API_VERSION}/` +
@@ -122,12 +143,10 @@ async function sendWhatsAppMessage(to, text) {
 
   const response = await fetch(url, {
     method: "POST",
-
     headers: {
       "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
       "Content-Type": "application/json"
     },
-
     body: JSON.stringify({
       messaging_product: "whatsapp",
       recipient_type: "individual",
