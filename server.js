@@ -18,8 +18,7 @@ const GRAPH_API_VERSION =
   process.env.GRAPH_API_VERSION || "v23.0";
 
 const GEMINI_MODEL =
-  process.env.GEMINI_MODEL || "gemini-2.5-flash";
-
+  process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 // ==============================
 // GEMINI
