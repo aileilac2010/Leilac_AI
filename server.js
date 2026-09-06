@@ -1,214 +1,722 @@
 import express from "express";
+import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 
-app.use(express.json());
-
-const PORT = process.env.PORT || 10000;
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL || "openrouter/free";
-
-const SYSTEM_INSTRUCTION = `
-Você é o Leilac AI, um assistente de inteligência artificial útil, inteligente e amigável.
-
-REGRAS:
-- Responda sempre em português, a menos que o utilizador peça outro idioma.
-- Responda de forma clara e natural.
-- Você pode responder perguntas de conhecimento geral, ciência, história, geografia, tecnologia, música, entretenimento e outros assuntos.
-- Quando não tiver certeza de uma informação, diga claramente que não tem certeza.
-- Não invente informações.
-- Não diga que é o Google, Gemini ou OpenRouter.
-- Seu nome é Leilac AI.
-- Seja direto, mas dê explicações suficientes para que o utilizador entenda.
-`;
-
-console.log("========================================");
-console.log("INICIANDO LEILAC AI");
-console.log("========================================");
-console.log(
-  "OpenRouter API Key:",
-  OPENROUTER_API_KEY ? "CONFIGURADA" : "NÃO CONFIGURADA"
-);
-console.log("Modelo:", OPENROUTER_MODEL);
-console.log("Porta:", PORT);
-console.log("========================================");
+const PORT = process.env.PORT || 3000;
 
 // ========================================
-// ROTA PRINCIPAL
+// VARIÁVEIS DE AMBIENTE
+// ========================================
+
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+const GRAPH_API_VERSION =
+  process.env.GRAPH_API_VERSION || "v23.0";
+
+const GEMINI_MODEL =
+  process.env.GEMINI_MODEL || "gemini-3.8-flash";
+
+
+// ========================================
+// GEMINI
+// ========================================
+
+if (!GEMINI_API_KEY) {
+  console.error(
+    "ERRO: GEMINI_API_KEY não foi configurada."
+  );
+}
+
+const ai = new GoogleGenAI({
+  apiKey: GEMINI_API_KEY
+});
+
+
+// ========================================
+// EXPRESS
+// ========================================
+
+app.use(
+  express.json({
+    limit: "1mb"
+  })
+);
+
+
+// ========================================
+// CORS
+// ========================================
+
+app.use((req, res, next) => {
+
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS"
+  );
+
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+
+// ========================================
+// PÁGINA INICIAL
 // ========================================
 
 app.get("/", (req, res) => {
-  res.json({
-    status: "online",
-    name: "Leilac AI",
-    model: OPENROUTER_MODEL,
-    provider: "OpenRouter",
-    message: "Leilac AI está funcionando."
-  });
+
+  res.send(`
+    <!DOCTYPE html>
+
+    <html lang="pt">
+
+    <head>
+
+      <meta charset="UTF-8">
+
+      <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+      >
+
+      <title>Leilac AI</title>
+
+      <style>
+
+        body {
+          background: #080808;
+          color: white;
+          font-family: Arial, sans-serif;
+
+          display: flex;
+          justify-content: center;
+          align-items: center;
+
+          min-height: 100vh;
+
+          margin: 0;
+
+          text-align: center;
+        }
+
+        div {
+          max-width: 600px;
+          padding: 30px;
+        }
+
+        h1 {
+          font-size: 45px;
+        }
+
+        p {
+          color: #999;
+          font-size: 18px;
+        }
+
+      </style>
+
+    </head>
+
+    <body>
+
+      <div>
+
+        <h1>✦ Leilac AI</h1>
+
+        <p>
+          Assistente de inteligência artificial
+          funcionando normalmente.
+        </p>
+
+      </div>
+
+    </body>
+
+    </html>
+  `);
+
 });
+
+
+// ========================================
+// PÁGINA BUSINESS
+// ========================================
+
+app.get("/business", (req, res) => {
+
+  res.send(`
+    <!DOCTYPE html>
+
+    <html lang="pt">
+
+    <head>
+
+      <meta charset="UTF-8">
+
+      <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+      >
+
+      <title>Leilac AI</title>
+
+    </head>
+
+    <body>
+
+      <h1>Leilac AI</h1>
+
+      <p>
+        Assistente de inteligência artificial
+        para ajudar os utilizadores através
+        de conversas e respostas inteligentes.
+      </p>
+
+      <p>
+        A Leilac AI utiliza tecnologia de
+        inteligência artificial para responder
+        perguntas e auxiliar em diferentes tarefas.
+      </p>
+
+    </body>
+
+    </html>
+  `);
+
+});
+
 
 // ========================================
 // HEALTH CHECK
 // ========================================
 
 app.get("/health", (req, res) => {
+
   res.json({
-    status: "healthy",
-    openrouter: OPENROUTER_API_KEY
+
+    status: "ok",
+
+    service: "Leilac AI",
+
+    gemini: GEMINI_API_KEY
       ? "configured"
-      : "missing"
+      : "missing",
+
+    model: GEMINI_MODEL
+
   });
+
 });
 
+
 // ========================================
-// FUNÇÃO DA IA
+// FUNÇÃO CENTRAL DA IA
 // ========================================
 
 async function generateAIResponse(message) {
-  if (!OPENROUTER_API_KEY) {
-    throw new Error("OPENROUTER_API_KEY não configurada.");
-  }
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
+  const response =
+    await ai.models.generateContent({
 
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://leilac-ai2.onrender.com",
-        "X-Title": "Leilac AI"
-      },
+      model: GEMINI_MODEL,
 
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
+      contents: message,
 
-        messages: [
+      config: {
+
+        // ==================================
+        // RACIOCÍNIO
+        // ==================================
+
+        thinkingConfig: {
+
+          thinkingLevel: "high"
+
+        },
+
+
+        // ==================================
+        // GOOGLE SEARCH
+        // ==================================
+
+        tools: [
+
           {
-            role: "system",
-            content: SYSTEM_INSTRUCTION
-          },
-          {
-            role: "user",
-            content: message.trim()
+            googleSearch: {}
           }
+
         ],
 
-        temperature: 0.7,
 
-        max_tokens: 1000
-      })
-    }
-  );
+        // ==================================
+        // PERSONALIDADE DA LEILAC
+        // ==================================
 
-  const data = await response.json();
+        systemInstruction:
 
-  // ========================================
-  // TRATAMENTO DE ERROS
-  // ========================================
+          "Você é a Leilac AI, uma assistente de inteligência artificial avançada. " +
 
-  if (!response.ok) {
-    console.error("ERRO OPENROUTER:");
-    console.error(JSON.stringify(data, null, 2));
+          "Responda sempre em português, salvo quando o utilizador pedir outro idioma. " +
 
-    const errorMessage =
-      data?.error?.message ||
-      "Erro desconhecido no OpenRouter.";
+          "Você deve conseguir responder perguntas de conhecimento geral, escolares, científicas, matemáticas, tecnológicas, culturais e históricas. " +
 
-    throw new Error(
-      `OpenRouter ${response.status}: ${errorMessage}`
-    );
-  }
+          "Quando souber a resposta com segurança, responda diretamente. " +
 
-  // ========================================
-  // EXTRAIR RESPOSTA
-  // ========================================
+          "Quando a pergunta envolver informações recentes, atuais, pessoas, acontecimentos, notícias, resultados, preços, lançamentos ou qualquer informação que possa ter mudado, use a Pesquisa Google para verificar os dados antes de responder. " +
+
+          "Use a Pesquisa Google também quando ela puder melhorar significativamente a precisão da resposta. " +
+
+          "Não diga ao utilizador que você não consegue pesquisar se a ferramenta estiver disponível. " +
+
+          "Depois de pesquisar, sintetize as informações encontradas de forma clara e natural. " +
+
+          "Para perguntas simples, seja direto. " +
+
+          "Para perguntas complexas, explique cuidadosamente. " +
+
+          "Em matemática, faça os cálculos corretamente e mostre os passos quando forem úteis. " +
+
+          "Em programação, forneça soluções corretas e código funcional quando apropriado. " +
+
+          "Em assuntos escolares, explique de maneira didática e fácil de entender. " +
+
+          "Não invente fatos ou fontes. " +
+
+          "Se existirem informações conflitantes, diga isso claramente. " +
+
+          "Não diga que é humano. " +
+
+          "Seja útil, natural, educada e objetiva."
+
+      }
+
+    });
+
 
   const answer =
-    data?.choices?.[0]?.message?.content;
+    response.text;
+
 
   if (!answer) {
-    console.error("Resposta inesperada:");
-    console.error(JSON.stringify(data, null, 2));
 
-    throw new Error(
-      "O OpenRouter não retornou uma resposta válida."
+    return (
+      "Desculpa, não consegui gerar uma resposta agora."
     );
+
   }
 
-  return answer.trim();
+
+  return answer;
+
 }
 
+
 // ========================================
-// ENDPOINT /CHAT
+// CHAT DO SITE
 // ========================================
 
 app.post("/chat", async (req, res) => {
+
   try {
-    const { message } = req.body;
 
-    if (!message || typeof message !== "string") {
+    const message =
+      req.body?.message;
+
+
+    // -----------------------------
+    // VALIDAR MENSAGEM
+    // -----------------------------
+
+    if (
+      typeof message !== "string" ||
+      !message.trim()
+    ) {
+
       return res.status(400).json({
-        success: false,
-        error: "Envie uma mensagem válida."
+
+        error:
+          "Mensagem inválida."
+
       });
+
     }
 
-    if (message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "A mensagem não pode estar vazia."
+
+    // -----------------------------
+    // VALIDAR GEMINI
+    // -----------------------------
+
+    if (!GEMINI_API_KEY) {
+
+      return res.status(500).json({
+
+        error:
+          "A chave da IA não está configurada no servidor."
+
       });
+
     }
+
 
     console.log(
-      `Pergunta recebida: ${message.trim()}`
+      "Mensagem recebida pelo site:",
+      message
     );
 
-    const answer = await generateAIResponse(message);
 
-    console.log("Resposta gerada com sucesso.");
+    // -----------------------------
+    // GERAR RESPOSTA
+    // -----------------------------
 
-    res.json({
-      success: true,
-      message: answer,
-      model: OPENROUTER_MODEL
+    const reply =
+      await generateAIResponse(
+        message
+      );
+
+
+    console.log(
+      "Resposta enviada pelo site:",
+      reply
+    );
+
+
+    return res.json({
+
+      reply
+
     });
+
 
   } catch (error) {
-    console.error("ERRO NO /CHAT:");
-    console.error(error);
 
-    res.status(500).json({
-      success: false,
-      error: "Não foi possível gerar uma resposta.",
-      details: error.message
+    console.error(
+      "Erro no /chat:",
+      error
+    );
+
+
+    return res.status(500).json({
+
+      error:
+        "Ocorreu um erro ao processar a mensagem."
+
     });
+
   }
+
 });
 
+
 // ========================================
-// 404
+// WEBHOOK META - VERIFICAÇÃO
 // ========================================
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Rota não encontrada."
-  });
+app.get("/webhook", (req, res) => {
+
+  const mode =
+    req.query["hub.mode"];
+
+  const token =
+    req.query["hub.verify_token"];
+
+  const challenge =
+    req.query["hub.challenge"];
+
+
+  if (
+    mode === "subscribe" &&
+    token === VERIFY_TOKEN
+  ) {
+
+    console.log(
+      "Webhook verificado pela Meta."
+    );
+
+    return res
+      .status(200)
+      .send(challenge);
+
+  }
+
+
+  console.log(
+    "Falha na verificação do webhook."
+  );
+
+  return res.sendStatus(403);
+
 });
+
+
+// ========================================
+// WEBHOOK META - RECEBER MENSAGENS
+// ========================================
+
+app.post("/webhook", async (req, res) => {
+
+  // Responder imediatamente à Meta
+  res.sendStatus(200);
+
+
+  try {
+
+    const body =
+      req.body;
+
+
+    // -----------------------------
+    // VALIDAR EVENTO
+    // -----------------------------
+
+    if (
+      body.object !==
+      "whatsapp_business_account"
+    ) {
+
+      return;
+
+    }
+
+
+    const entries =
+      body.entry || [];
+
+
+    // -----------------------------
+    // PROCESSAR ENTRADAS
+    // -----------------------------
+
+    for (const entry of entries) {
+
+      const changes =
+        entry.changes || [];
+
+
+      for (const change of changes) {
+
+        const value =
+          change.value;
+
+
+        if (
+          !value ||
+          !value.messages
+        ) {
+
+          continue;
+
+        }
+
+
+        // ---------------------------
+        // PROCESSAR MENSAGENS
+        // ---------------------------
+
+        for (
+          const message
+          of value.messages
+        ) {
+
+
+          // Apenas texto
+
+          if (
+            message.type !== "text"
+          ) {
+
+            continue;
+
+          }
+
+
+          const from =
+            message.from;
+
+
+          const userMessage =
+            message.text?.body;
+
+
+          if (
+            !from ||
+            !userMessage
+          ) {
+
+            continue;
+
+          }
+
+
+          console.log(
+            "Mensagem recebida pelo WhatsApp:",
+            userMessage
+          );
+
+
+          // ---------------------------
+          // GEMINI + GOOGLE SEARCH
+          // ---------------------------
+
+          const aiReply =
+            await generateAIResponse(
+              userMessage
+            );
+
+
+          console.log(
+            "Resposta da IA:",
+            aiReply
+          );
+
+
+          // ---------------------------
+          // ENVIAR PARA WHATSAPP
+          // ---------------------------
+
+          await sendWhatsAppMessage(
+            from,
+            aiReply
+          );
+
+        }
+
+      }
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      "Erro no webhook:",
+      error
+    );
+
+  }
+
+});
+
+
+// ========================================
+// ENVIAR MENSAGEM PELO WHATSAPP
+// ========================================
+
+async function sendWhatsAppMessage(
+  to,
+  text
+) {
+
+  const url =
+    `https://graph.facebook.com/` +
+    `${GRAPH_API_VERSION}/` +
+    `${PHONE_NUMBER_ID}/messages`;
+
+
+  const response =
+    await fetch(
+
+      url,
+
+      {
+
+        method: "POST",
+
+        headers: {
+
+          "Authorization":
+            `Bearer ${WHATSAPP_TOKEN}`,
+
+          "Content-Type":
+            "application/json"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            messaging_product:
+              "whatsapp",
+
+            recipient_type:
+              "individual",
+
+            to,
+
+            type:
+              "text",
+
+            text: {
+
+              preview_url:
+                false,
+
+              body:
+                text
+
+            }
+
+          })
+
+      }
+
+    );
+
+
+  const data =
+    await response.json();
+
+
+  if (!response.ok) {
+
+    console.error(
+      "Erro ao enviar WhatsApp:",
+      data
+    );
+
+    throw new Error(
+      JSON.stringify(data)
+    );
+
+  }
+
+
+  console.log(
+    "Mensagem enviada pelo WhatsApp:",
+    data
+  );
+
+}
+
 
 // ========================================
 // INICIAR SERVIDOR
 // ========================================
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("========================================");
-  console.log("🚀 LEILAC AI ONLINE");
-  console.log(`🌐 Porta: ${PORT}`);
-  console.log(`🤖 Modelo: ${OPENROUTER_MODEL}`);
-  console.log("🔌 OpenRouter: ATIVADO");
-  console.log("========================================");
-});
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+
+    console.log(
+      `Leilac AI rodando em 0.0.0.0:${PORT}`
+    );
+
+  }
+);
