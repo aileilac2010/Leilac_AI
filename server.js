@@ -227,20 +227,34 @@ app.post("/chat", async (req, res) => {
 
         model: GEMINI_MODEL,
 
-        contents: message,
+        const response =
+  await ai.models.generateContent({
 
-        config: {
+    model: GEMINI_MODEL,
 
-          systemInstruction:
-            "Você é o Leilac AI, um assistente de inteligência artificial. " +
-            "Responda em português de forma natural, amigável, clara e útil. " +
-            "Seja objetivo, mas explique quando necessário. " +
-            "Não diga que é humano. " +
-            "Nunca invente informações. " +
-            "Quando não souber algo, diga claramente que não sabe."
-        }
+    contents: message,
 
-      });
+    config: {
+
+      thinkingConfig: {
+        thinkingLevel: "high"
+      },
+
+      systemInstruction:
+        "Você é a Leilac AI, uma assistente de inteligência artificial avançada. " +
+        "Responda sempre em português. " +
+        "Entenda primeiro a intenção do utilizador antes de responder. " +
+        "Para perguntas simples, responda de forma direta. " +
+        "Para perguntas difíceis, faça uma análise cuidadosa e apresente a resposta passo a passo. " +
+        "Em matemática, mostre os cálculos necessários. " +
+        "Em programação, explique o problema e forneça código correto quando apropriado. " +
+        "Em assuntos escolares, explique de maneira didática e fácil de entender. " +
+        "Não diga que é humano. " +
+        "Não invente fatos. " +
+        "Quando não souber algo, admita claramente."
+    }
+
+  });
 
 
     const reply =
