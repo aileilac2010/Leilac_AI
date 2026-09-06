@@ -8,7 +8,7 @@
   Depois vamos colocar a URL do Render.
 */
 
-const API_URL = "";
+const API_URL = "https://leilac-ai2.onrender.com";
 
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
