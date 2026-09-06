@@ -18,7 +18,7 @@ const GRAPH_API_VERSION =
   process.env.GRAPH_API_VERSION || "v23.0";
 
 const GEMINI_MODEL =
-  process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
 
 // ========================================
@@ -26,7 +26,9 @@ const GEMINI_MODEL =
 // ========================================
 
 if (!GEMINI_API_KEY) {
-  console.error("ERRO: GEMINI_API_KEY não foi configurada.");
+  console.error(
+    "ERRO: GEMINI_API_KEY não foi configurada."
+  );
 }
 
 const ai = new GoogleGenAI({
@@ -38,7 +40,11 @@ const ai = new GoogleGenAI({
 // EXPRESS
 // ========================================
 
-app.use(express.json({ limit: "1mb" }));
+app.use(
+  express.json({
+    limit: "1mb"
+  })
+);
 
 
 // ========================================
@@ -67,7 +73,6 @@ app.use((req, res, next) => {
   }
 
   next();
-
 });
 
 
@@ -83,6 +88,7 @@ app.get("/", (req, res) => {
     <html lang="pt">
 
     <head>
+
       <meta charset="UTF-8">
 
       <meta
@@ -125,6 +131,7 @@ app.get("/", (req, res) => {
         }
 
       </style>
+
     </head>
 
     <body>
@@ -220,7 +227,7 @@ app.get("/health", (req, res) => {
 
 
 // ========================================
-// FUNÇÃO CENTRAL DO GEMINI
+// FUNÇÃO CENTRAL DA IA
 // ========================================
 
 async function generateAIResponse(message) {
@@ -234,9 +241,33 @@ async function generateAIResponse(message) {
 
       config: {
 
+        // ==================================
+        // RACIOCÍNIO
+        // ==================================
+
         thinkingConfig: {
+
           thinkingLevel: "high"
+
         },
+
+
+        // ==================================
+        // GOOGLE SEARCH
+        // ==================================
+
+        tools: [
+
+          {
+            googleSearch: {}
+          }
+
+        ],
+
+
+        // ==================================
+        // PERSONALIDADE DA LEILAC
+        // ==================================
 
         systemInstruction:
 
@@ -244,23 +275,31 @@ async function generateAIResponse(message) {
 
           "Responda sempre em português, salvo quando o utilizador pedir outro idioma. " +
 
-          "Entenda primeiro o que o utilizador está a pedir antes de responder. " +
+          "Você deve conseguir responder perguntas de conhecimento geral, escolares, científicas, matemáticas, tecnológicas, culturais e históricas. " +
 
-          "Para perguntas simples, responda de forma rápida e clara. " +
+          "Quando souber a resposta com segurança, responda diretamente. " +
 
-          "Para perguntas complexas, analise cuidadosamente o problema antes de responder. " +
+          "Quando a pergunta envolver informações recentes, atuais, pessoas, acontecimentos, notícias, resultados, preços, lançamentos ou qualquer informação que possa ter mudado, use a Pesquisa Google para verificar os dados antes de responder. " +
+
+          "Use a Pesquisa Google também quando ela puder melhorar significativamente a precisão da resposta. " +
+
+          "Não diga ao utilizador que você não consegue pesquisar se a ferramenta estiver disponível. " +
+
+          "Depois de pesquisar, sintetize as informações encontradas de forma clara e natural. " +
+
+          "Para perguntas simples, seja direto. " +
+
+          "Para perguntas complexas, explique cuidadosamente. " +
 
           "Em matemática, faça os cálculos corretamente e mostre os passos quando forem úteis. " +
 
-          "Em programação, forneça soluções corretas e explique o código quando necessário. " +
+          "Em programação, forneça soluções corretas e código funcional quando apropriado. " +
 
-          "Em assuntos escolares, explique de forma didática e fácil de entender. " +
+          "Em assuntos escolares, explique de maneira didática e fácil de entender. " +
 
-          "Quando uma pergunta tiver várias interpretações possíveis, peça esclarecimento em vez de inventar. " +
+          "Não invente fatos ou fontes. " +
 
-          "Nunca invente informações. " +
-
-          "Quando não souber algo, diga claramente que não sabe. " +
+          "Se existirem informações conflitantes, diga isso claramente. " +
 
           "Não diga que é humano. " +
 
@@ -271,10 +310,20 @@ async function generateAIResponse(message) {
     });
 
 
-  return (
-    response.text ||
-    "Desculpa, não consegui gerar uma resposta agora."
-  );
+  const answer =
+    response.text;
+
+
+  if (!answer) {
+
+    return (
+      "Desculpa, não consegui gerar uma resposta agora."
+    );
+
+  }
+
+
+  return answer;
 
 }
 
@@ -287,10 +336,13 @@ app.post("/chat", async (req, res) => {
 
   try {
 
-    const message = req.body?.message;
+    const message =
+      req.body?.message;
 
 
-    // Verificar mensagem
+    // -----------------------------
+    // VALIDAR MENSAGEM
+    // -----------------------------
 
     if (
       typeof message !== "string" ||
@@ -299,14 +351,17 @@ app.post("/chat", async (req, res) => {
 
       return res.status(400).json({
 
-        error: "Mensagem inválida."
+        error:
+          "Mensagem inválida."
 
       });
 
     }
 
 
-    // Verificar Gemini
+    // -----------------------------
+    // VALIDAR GEMINI
+    // -----------------------------
 
     if (!GEMINI_API_KEY) {
 
@@ -326,7 +381,9 @@ app.post("/chat", async (req, res) => {
     );
 
 
-    // Gerar resposta
+    // -----------------------------
+    // GERAR RESPOSTA
+    // -----------------------------
 
     const reply =
       await generateAIResponse(
@@ -415,16 +472,18 @@ app.get("/webhook", (req, res) => {
 app.post("/webhook", async (req, res) => {
 
   // Responder imediatamente à Meta
-
   res.sendStatus(200);
 
 
   try {
 
-    const body = req.body;
+    const body =
+      req.body;
 
 
-    // Verificar evento
+    // -----------------------------
+    // VALIDAR EVENTO
+    // -----------------------------
 
     if (
       body.object !==
@@ -439,6 +498,10 @@ app.post("/webhook", async (req, res) => {
     const entries =
       body.entry || [];
 
+
+    // -----------------------------
+    // PROCESSAR ENTRADAS
+    // -----------------------------
 
     for (const entry of entries) {
 
@@ -462,12 +525,17 @@ app.post("/webhook", async (req, res) => {
         }
 
 
+        // ---------------------------
+        // PROCESSAR MENSAGENS
+        // ---------------------------
+
         for (
           const message
           of value.messages
         ) {
 
-          // Apenas mensagens de texto
+
+          // Apenas texto
 
           if (
             message.type !== "text"
@@ -480,6 +548,7 @@ app.post("/webhook", async (req, res) => {
 
           const from =
             message.from;
+
 
           const userMessage =
             message.text?.body;
@@ -501,7 +570,9 @@ app.post("/webhook", async (req, res) => {
           );
 
 
-          // Gemini
+          // ---------------------------
+          // GEMINI + GOOGLE SEARCH
+          // ---------------------------
 
           const aiReply =
             await generateAIResponse(
@@ -515,7 +586,9 @@ app.post("/webhook", async (req, res) => {
           );
 
 
-          // Enviar resposta
+          // ---------------------------
+          // ENVIAR PARA WHATSAPP
+          // ---------------------------
 
           await sendWhatsAppMessage(
             from,
@@ -542,7 +615,7 @@ app.post("/webhook", async (req, res) => {
 
 
 // ========================================
-// ENVIAR MENSAGEM WHATSAPP
+// ENVIAR MENSAGEM PELO WHATSAPP
 // ========================================
 
 async function sendWhatsAppMessage(
