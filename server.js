@@ -5,9 +5,9 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// ==============================
+// ========================================
 // VARIÁVEIS DE AMBIENTE
-// ==============================
+// ========================================
 
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
@@ -20,9 +20,10 @@ const GRAPH_API_VERSION =
 const GEMINI_MODEL =
   process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
-// ==============================
+
+// ========================================
 // GEMINI
-// ==============================
+// ========================================
 
 if (!GEMINI_API_KEY) {
   console.error("ERRO: GEMINI_API_KEY não foi configurada.");
@@ -33,20 +34,19 @@ const ai = new GoogleGenAI({
 });
 
 
-// ==============================
+// ========================================
 // EXPRESS
-// ==============================
+// ========================================
 
 app.use(express.json({ limit: "1mb" }));
 
 
-// ==============================
+// ========================================
 // CORS
-// Permite que o site converse
-// com o servidor Render.
-// ==============================
+// ========================================
 
 app.use((req, res, next) => {
+
   res.setHeader(
     "Access-Control-Allow-Origin",
     "*"
@@ -67,31 +67,46 @@ app.use((req, res, next) => {
   }
 
   next();
+
 });
 
 
-// ==============================
+// ========================================
 // PÁGINA INICIAL
-// ==============================
+// ========================================
 
 app.get("/", (req, res) => {
+
   res.send(`
     <!DOCTYPE html>
+
     <html lang="pt">
+
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+      <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+      >
+
       <title>Leilac AI</title>
+
       <style>
+
         body {
           background: #080808;
           color: white;
           font-family: Arial, sans-serif;
+
           display: flex;
           justify-content: center;
           align-items: center;
+
           min-height: 100vh;
+
           margin: 0;
+
           text-align: center;
         }
 
@@ -108,39 +123,57 @@ app.get("/", (req, res) => {
           color: #999;
           font-size: 18px;
         }
+
       </style>
     </head>
 
     <body>
+
       <div>
+
         <h1>✦ Leilac AI</h1>
 
         <p>
           Assistente de inteligência artificial
           funcionando normalmente.
         </p>
+
       </div>
+
     </body>
+
     </html>
   `);
+
 });
 
 
-// ==============================
+// ========================================
 // PÁGINA BUSINESS
-// ==============================
+// ========================================
 
 app.get("/business", (req, res) => {
+
   res.send(`
     <!DOCTYPE html>
+
     <html lang="pt">
+
     <head>
+
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+      <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+      >
+
       <title>Leilac AI</title>
+
     </head>
 
     <body>
+
       <h1>Leilac AI</h1>
 
       <p>
@@ -154,30 +187,101 @@ app.get("/business", (req, res) => {
         inteligência artificial para responder
         perguntas e auxiliar em diferentes tarefas.
       </p>
+
     </body>
+
     </html>
   `);
+
 });
 
 
-// ==============================
+// ========================================
 // HEALTH CHECK
-// ==============================
+// ========================================
 
 app.get("/health", (req, res) => {
+
   res.json({
+
     status: "ok",
+
     service: "Leilac AI",
+
     gemini: GEMINI_API_KEY
       ? "configured"
-      : "missing"
+      : "missing",
+
+    model: GEMINI_MODEL
+
   });
+
 });
 
 
-// ==================================================
+// ========================================
+// FUNÇÃO CENTRAL DO GEMINI
+// ========================================
+
+async function generateAIResponse(message) {
+
+  const response =
+    await ai.models.generateContent({
+
+      model: GEMINI_MODEL,
+
+      contents: message,
+
+      config: {
+
+        thinkingConfig: {
+          thinkingLevel: "high"
+        },
+
+        systemInstruction:
+
+          "Você é a Leilac AI, uma assistente de inteligência artificial avançada. " +
+
+          "Responda sempre em português, salvo quando o utilizador pedir outro idioma. " +
+
+          "Entenda primeiro o que o utilizador está a pedir antes de responder. " +
+
+          "Para perguntas simples, responda de forma rápida e clara. " +
+
+          "Para perguntas complexas, analise cuidadosamente o problema antes de responder. " +
+
+          "Em matemática, faça os cálculos corretamente e mostre os passos quando forem úteis. " +
+
+          "Em programação, forneça soluções corretas e explique o código quando necessário. " +
+
+          "Em assuntos escolares, explique de forma didática e fácil de entender. " +
+
+          "Quando uma pergunta tiver várias interpretações possíveis, peça esclarecimento em vez de inventar. " +
+
+          "Nunca invente informações. " +
+
+          "Quando não souber algo, diga claramente que não sabe. " +
+
+          "Não diga que é humano. " +
+
+          "Seja útil, natural, educada e objetiva."
+
+      }
+
+    });
+
+
+  return (
+    response.text ||
+    "Desculpa, não consegui gerar uma resposta agora."
+  );
+
+}
+
+
+// ========================================
 // CHAT DO SITE
-// ==================================================
+// ========================================
 
 app.post("/chat", async (req, res) => {
 
@@ -185,28 +289,32 @@ app.post("/chat", async (req, res) => {
 
     const message = req.body?.message;
 
-    // ------------------------------
-    // Verificação da mensagem
-    // ------------------------------
+
+    // Verificar mensagem
 
     if (
       typeof message !== "string" ||
       !message.trim()
     ) {
+
       return res.status(400).json({
+
         error: "Mensagem inválida."
+
       });
+
     }
 
 
-    // ------------------------------
-    // Verificação da chave Gemini
-    // ------------------------------
+    // Verificar Gemini
 
     if (!GEMINI_API_KEY) {
 
       return res.status(500).json({
-        error: "A chave da IA não está configurada no servidor."
+
+        error:
+          "A chave da IA não está configurada no servidor."
+
       });
 
     }
@@ -218,48 +326,12 @@ app.post("/chat", async (req, res) => {
     );
 
 
-    // ------------------------------
-    // Gemini
-    // ------------------------------
-
-    const response =
-      await ai.models.generateContent({
-
-        model: GEMINI_MODEL,
-
-        const response =
-  await ai.models.generateContent({
-
-    model: GEMINI_MODEL,
-
-    contents: message,
-
-    config: {
-
-      thinkingConfig: {
-        thinkingLevel: "high"
-      },
-
-      systemInstruction:
-        "Você é a Leilac AI, uma assistente de inteligência artificial avançada. " +
-        "Responda sempre em português. " +
-        "Entenda primeiro a intenção do utilizador antes de responder. " +
-        "Para perguntas simples, responda de forma direta. " +
-        "Para perguntas difíceis, faça uma análise cuidadosa e apresente a resposta passo a passo. " +
-        "Em matemática, mostre os cálculos necessários. " +
-        "Em programação, explique o problema e forneça código correto quando apropriado. " +
-        "Em assuntos escolares, explique de maneira didática e fácil de entender. " +
-        "Não diga que é humano. " +
-        "Não invente fatos. " +
-        "Quando não souber algo, admita claramente."
-    }
-
-  });
-
+    // Gerar resposta
 
     const reply =
-      response.text ||
-      "Desculpa, não consegui gerar uma resposta agora.";
+      await generateAIResponse(
+        message
+      );
 
 
     console.log(
@@ -268,12 +340,10 @@ app.post("/chat", async (req, res) => {
     );
 
 
-    // ------------------------------
-    // Resposta para o site
-    // ------------------------------
-
     return res.json({
+
       reply
+
     });
 
 
@@ -286,8 +356,10 @@ app.post("/chat", async (req, res) => {
 
 
     return res.status(500).json({
+
       error:
         "Ocorreu um erro ao processar a mensagem."
+
     });
 
   }
@@ -295,9 +367,9 @@ app.post("/chat", async (req, res) => {
 });
 
 
-// ==================================================
-// WEBHOOK - VERIFICAÇÃO META
-// ==================================================
+// ========================================
+// WEBHOOK META - VERIFICAÇÃO
+// ========================================
 
 app.get("/webhook", (req, res) => {
 
@@ -336,13 +408,14 @@ app.get("/webhook", (req, res) => {
 });
 
 
-// ==================================================
-// WEBHOOK - RECEBER MENSAGENS DO WHATSAPP
-// ==================================================
+// ========================================
+// WEBHOOK META - RECEBER MENSAGENS
+// ========================================
 
 app.post("/webhook", async (req, res) => {
 
-  // Respondemos imediatamente para a Meta
+  // Responder imediatamente à Meta
+
   res.sendStatus(200);
 
 
@@ -351,25 +424,21 @@ app.post("/webhook", async (req, res) => {
     const body = req.body;
 
 
-    // ------------------------------
-    // Verificar tipo de evento
-    // ------------------------------
+    // Verificar evento
 
     if (
       body.object !==
       "whatsapp_business_account"
     ) {
+
       return;
+
     }
 
 
     const entries =
       body.entry || [];
 
-
-    // ------------------------------
-    // Percorrer eventos
-    // ------------------------------
 
     for (const entry of entries) {
 
@@ -387,25 +456,25 @@ app.post("/webhook", async (req, res) => {
           !value ||
           !value.messages
         ) {
+
           continue;
+
         }
 
-
-        // ------------------------------
-        // Percorrer mensagens
-        // ------------------------------
 
         for (
           const message
           of value.messages
         ) {
 
+          // Apenas mensagens de texto
 
-          // Atualmente aceitamos texto
           if (
             message.type !== "text"
           ) {
+
             continue;
+
           }
 
 
@@ -420,7 +489,9 @@ app.post("/webhook", async (req, res) => {
             !from ||
             !userMessage
           ) {
+
             continue;
+
           }
 
 
@@ -430,33 +501,12 @@ app.post("/webhook", async (req, res) => {
           );
 
 
-          // ------------------------------
           // Gemini
-          // ------------------------------
-
-          const response =
-            await ai.models.generateContent({
-
-              model: GEMINI_MODEL,
-
-              contents: userMessage,
-
-              config: {
-
-                systemInstruction:
-                  "Você é o Leilac AI, um assistente de WhatsApp. " +
-                  "Responda em português de forma natural, amigável, clara e objetiva. " +
-                  "Não diga que é humano. " +
-                  "Se não souber uma informação, diga claramente que não sabe."
-
-              }
-
-            });
-
 
           const aiReply =
-            response.text ||
-            "Desculpa, não consegui gerar uma resposta agora.";
+            await generateAIResponse(
+              userMessage
+            );
 
 
           console.log(
@@ -465,9 +515,7 @@ app.post("/webhook", async (req, res) => {
           );
 
 
-          // ------------------------------
-          // Enviar resposta para WhatsApp
-          // ------------------------------
+          // Enviar resposta
 
           await sendWhatsAppMessage(
             from,
@@ -493,9 +541,9 @@ app.post("/webhook", async (req, res) => {
 });
 
 
-// ==================================================
-// ENVIAR MENSAGEM PELO WHATSAPP
-// ==================================================
+// ========================================
+// ENVIAR MENSAGEM WHATSAPP
+// ========================================
 
 async function sendWhatsAppMessage(
   to,
@@ -510,8 +558,11 @@ async function sendWhatsAppMessage(
 
   const response =
     await fetch(
+
       url,
+
       {
+
         method: "POST",
 
         headers: {
@@ -551,6 +602,7 @@ async function sendWhatsAppMessage(
           })
 
       }
+
     );
 
 
@@ -580,9 +632,9 @@ async function sendWhatsAppMessage(
 }
 
 
-// ==================================================
+// ========================================
 // INICIAR SERVIDOR
-// ==================================================
+// ========================================
 
 app.listen(
   PORT,
