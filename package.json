@@ -1,12 +1,12 @@
 {
-  "name": "leilac-ai-whatsapp",
+  "name": "whatsapp-ai",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "openai": "^5.0.0"
+    "@google/genai": "^1.0.0",
+    "express": "^5.1.0"
   }
 }
